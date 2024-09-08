@@ -1,0 +1,67 @@
+from datasets import load_metric
+import pandas as pd
+df=pd.read_csv("articleSet.csv")
+df.head()
+
+print(df.shape)
+df=df.dropna()
+print(df.shape)
+
+max_input_length=1024
+max_output_length=1024
+batch_size=4
+def process_data_to_model_inputs(batch ):
+  inputs=tokenizer(
+      batch["summary"],
+      padding="max_length",
+      truncation=True,
+      max_length=max_output_length,
+  )
+  ouputs=tokenizer(
+      batch["content"],
+      padding="max_length",
+      truncation=True,
+      max_length=max_input_length,
+  )
+  batch["input_ids"]=inputs.input_ids
+  batch["attention_mask"]=inputs.attention_mask
+  
+  batch["global_attention_mask"]=len(batch["input_ids"])*[[0 for _ in range(len(batch["input_ids"][0]))]]
+  batch["global_attention_mask"][0][0]=1
+  batch["labels"]=ouputs.input_ids
+  batch["labels"]=[[-100 if token == tokenizer.pad_token_id else token for token in labels]
+                   for labels in batch["labels"]]
+  return batch
+
+import numpy as np
+train,validate,test=np.split(tempDf.sample(frac=1,random_state=42),[int(.4*len(df)),int(.5*len(df))])
+
+print(train.shape,validate.shape)
+
+train =train[0:250]
+validate=validate[25:50]
+print(train.shape,validate.shape)
+
+from datasets import Dataset
+train_dataset=Dataset.from_pandas(train)
+val_dataset=Dataset.from_pandas(validate)
+
+val_dataset=val_dataset.map(
+    process_data_to_model_inputs,
+    batched=True,
+    batch_size=batch_size,
+    remove_columns=["content","summary","length","__index_level_0__"],
+)
+
+train_dataset.set_format(
+    type="torch",
+    columns=["input_ids", "attention_mask", "global_attention_mask", "labels"],
+)
+val_dataset.set_format(
+    type="torch",
+    columns=["input_ids", "attention_mask", "global_attention_mask", "labels"],
+)
+
+
+
+
